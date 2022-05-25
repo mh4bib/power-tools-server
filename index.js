@@ -58,11 +58,31 @@ async function run() {
             res.send(tools);
         });
 
+        app.post('/tools', async (req, res) => {
+            const newTool = req.body;
+            const tools = await toolsCollection.insertOne(newTool);
+            res.send(tools);
+        });
+
+        app.delete('/tools/:id', async (req, res) => {
+            const id = req.params.id;
+            const query = { _id: ObjectId(id) };
+            const tool = await toolsCollection.deleteOne(query);
+            res.send(tool);
+        });
+
         app.get('/tools/:id', async (req, res) => {
             const id = req.params.id;
             const query = { _id: ObjectId(id) };
             const item = await toolsCollection.findOne(query);
             res.send(item);
+        });
+
+        app.get('/ordered-tools', async (req, res) => {
+            const query = {};
+            const cursor = ordersCollection.find(query);
+            const Orderedtools = await cursor.toArray();
+            res.send(Orderedtools);
         });
 
         app.post('/ordered-tools', async (req, res) => {
