@@ -19,6 +19,7 @@ async function run() {
         const reviewsCollection = client.db('power_tools').collection('reviews');
         const toolsCollection = client.db('power_tools').collection('tools');
         const ordersCollection = client.db('power_tools').collection('orderedTools');
+        const usersCollection = client.db('power_tools').collection('users');
 
         app.get('/reviews', async (req, res) => {
             const query = {};
@@ -68,6 +69,17 @@ async function run() {
             res.send(tool);
         });
 
+        app.put('/users/:email', async (req, res) => {
+            const email = req.params.email;
+            const user = req.body;
+            const filter = { email: email };
+            const options = { upsert: true };
+            const updatedDoc = {
+                $set: user,
+            };
+            const result = await usersCollection.updateOne(filter, updatedDoc, options);
+            res.send(result);
+        })
     }
     finally {
 
