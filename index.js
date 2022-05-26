@@ -4,6 +4,7 @@ const jwt = require('jsonwebtoken');
 require('dotenv').config();
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 const { use } = require('express/lib/application');
+const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 
 const app = express();
 const port = process.env.PORT || 5000;
@@ -23,7 +24,7 @@ function verifyJWT(req, res, next) {
     const token = authHeaders.split(' ')[1];
     jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, function (err, decoded) {
         if (err) {
-            return res.status(403).send({ message: 'Forbidden access' });
+            return res.status(403).send({ message: 'Forbidden access from jwt', err });
         }
         req.decoded = decoded;
         next();
@@ -84,6 +85,13 @@ async function run() {
             const Orderedtools = await cursor.toArray();
             res.send(Orderedtools);
         });
+        
+        app.get('/ordered-tools/:id', async (req, res) => {
+            const id = req.params.id;
+            const query = { _id: ObjectId(id) };
+            const Orderedtool = await ordersCollection.findOne(query);
+            res.send(Orderedtool);
+        });
 
         app.post('/ordered-tools', async (req, res) => {
             const newTool = req.body;
@@ -115,7 +123,7 @@ async function run() {
         app.get('/users', async (req, res) => {
             const users = await usersCollection.find().toArray();
             res.send(users);
-        })
+        });
 
         app.get('/users/:email', async (req, res) => {
             const email = req.params.email;
@@ -152,14 +160,28 @@ async function run() {
             const result = await usersCollection.updateOne(filter, updatedDoc, options);
             const token = jwt.sign({ email }, process.env.ACCESS_TOKEN_SECRET, { expiresIn: '1h' })
             res.send({ result, token });
-        })
+        });
 
         app.get('/admin/:email', async(req, res)=>{
             const email = req.params.email;
             const user = await usersCollection.findOne({email:email})
             const isAdmin = user.role==='admin';
             res.send({admin:isAdmin});
-        })
+        });
+
+        //payment api
+        app.post('/create-payment-intent',verifyJWT, async(req, res) =>{
+            const order = req.body;
+            const price = order.total;
+            const amount = price*100;
+            const paymentIntent = await stripe.paymentIntents.create({
+              amount : amount,
+              currency: 'usd',
+              payment_method_types:['card']
+            });
+            res.send({clientSecret: paymentIntent.client_secret})
+          });
+
     }
     finally {
 
