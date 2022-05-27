@@ -85,7 +85,7 @@ async function run() {
             const Orderedtools = await cursor.toArray();
             res.send(Orderedtools);
         });
-        
+
         app.get('/ordered-tools/:id', async (req, res) => {
             const id = req.params.id;
             const query = { _id: ObjectId(id) };
@@ -99,16 +99,30 @@ async function run() {
             res.send(tool);
         });
 
+        app.patch('/ordered-tools/:id', verifyJWT, async(req, res)=>{
+            const id = req.params.id;
+            const payment = req.body;
+            const filter = {_id: ObjectId(id)};
+            const updatedDoc = {
+                $set: {
+                    paid: true,
+                    transactionId: payment.transactionId
+                }
+            }
+            const updatedOrder = await ordersCollection.updateOne(filter, updatedDoc);
+            res.send(updatedOrder);
+        })
+
         app.get('/my-orders', verifyJWT, async (req, res) => {
             const email = req.query.email;
             const decodedEmail = req.decoded.email;
-            if(email===decodedEmail){
+            if (email === decodedEmail) {
                 const query = { email };
                 const cursor = ordersCollection.find(query);
                 const myOrders = await cursor.toArray();
                 res.send(myOrders);
             }
-            else{
+            else {
                 return res.status(403).send({ message: 'forbidden' });
             }
         });
@@ -127,7 +141,7 @@ async function run() {
 
         app.get('/users/:email', async (req, res) => {
             const email = req.params.email;
-            const query = { email:email };
+            const query = { email: email };
             const user = await usersCollection.findOne(query);
             res.send(user);
         });
@@ -135,17 +149,17 @@ async function run() {
         app.put('/users/admin/:email', verifyJWT, async (req, res) => {
             const email = req.params.email;
             const requester = req.decoded.email;
-            const requesterAccount = await usersCollection.findOne({email: requester});
+            const requesterAccount = await usersCollection.findOne({ email: requester });
             if (requesterAccount.role === 'admin') {
                 const filter = { email: email };
-            const updateDoc = {
-                $set: { role: 'admin' },
-            };
-            const result = await usersCollection.updateOne(filter, updateDoc);
-            res.send(result);
+                const updateDoc = {
+                    $set: { role: 'admin' },
+                };
+                const result = await usersCollection.updateOne(filter, updateDoc);
+                res.send(result);
             }
-            else{
-                res.status(403).send({message: 'forbidden access'})
+            else {
+                res.status(403).send({ message: 'forbidden access' })
             }
         });
 
@@ -158,29 +172,29 @@ async function run() {
                 $set: user,
             };
             const result = await usersCollection.updateOne(filter, updatedDoc, options);
-            const token = jwt.sign({ email }, process.env.ACCESS_TOKEN_SECRET, { expiresIn: '1h' })
+            const token = jwt.sign({ email }, process.env.ACCESS_TOKEN_SECRET, { expiresIn: '18h' })
             res.send({ result, token });
         });
 
-        app.get('/admin/:email', async(req, res)=>{
+        app.get('/admin/:email', async (req, res) => {
             const email = req.params.email;
-            const user = await usersCollection.findOne({email:email})
-            const isAdmin = user.role==='admin';
-            res.send({admin:isAdmin});
+            const user = await usersCollection.findOne({ email: email })
+            const isAdmin = user.role === 'admin';
+            res.send({ admin: isAdmin });
         });
 
         //payment api
-        app.post('/create-payment-intent',verifyJWT, async(req, res) =>{
+        app.post('/create-payment-intent', verifyJWT, async (req, res) => {
             const order = req.body;
-            const price = order.total;
-            const amount = price*100;
+            const price = order.totalPrice;
+            const amount = price * 100;
             const paymentIntent = await stripe.paymentIntents.create({
-              amount : amount,
-              currency: 'usd',
-              payment_method_types:['card']
+                amount: amount,
+                currency: 'usd',
+                payment_method_types: ['card']
             });
-            res.send({clientSecret: paymentIntent.client_secret})
-          });
+            res.send({ clientSecret: paymentIntent.client_secret })
+        });
 
     }
     finally {
