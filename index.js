@@ -113,6 +113,20 @@ async function run() {
             res.send(updatedOrder);
         })
 
+        app.patch('/ordered-tool/:id', verifyJWT, async(req, res)=>{
+            const id = req.params.id;
+            // const payment = req.body;
+            const filter = {_id: ObjectId(id)};
+            const updatedDoc = {
+                $set: {
+                    shipped: true,
+                    // transactionId: payment.transactionId
+                }
+            }
+            const updatedOrder = await ordersCollection.updateOne(filter, updatedDoc);
+            res.send(updatedOrder);
+        })
+
         app.get('/my-orders', verifyJWT, async (req, res) => {
             const email = req.query.email;
             const decodedEmail = req.decoded.email;
