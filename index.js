@@ -16,6 +16,7 @@ const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster
 
 const client = new MongoClient(uri, { useNewUrlParser: true, useUnifiedTopology: true, serverApi: ServerApiVersion.v1 });
 
+// verify jwt function
 function verifyJWT(req, res, next) {
     const authHeaders = req.headers.authorization;
     if (!authHeaders) {
@@ -34,11 +35,14 @@ function verifyJWT(req, res, next) {
 async function run() {
     try {
         await client.connect();
+
+        //collections
         const reviewsCollection = client.db('power_tools').collection('reviews');
         const toolsCollection = client.db('power_tools').collection('tools');
         const ordersCollection = client.db('power_tools').collection('orderedTools');
         const usersCollection = client.db('power_tools').collection('users');
 
+        // review apis 
         app.get('/reviews', async (req, res) => {
             const query = {};
             const cursor = reviewsCollection.find(query);
@@ -52,6 +56,7 @@ async function run() {
             res.send(review);
         });
 
+        // tools apis 
         app.get('/tools', async (req, res) => {
             const query = {};
             const cursor = toolsCollection.find(query);
@@ -79,6 +84,7 @@ async function run() {
             res.send(item);
         });
 
+        //order apis
         app.get('/ordered-tools', async (req, res) => {
             const query = {};
             const cursor = ordersCollection.find(query);
@@ -115,12 +121,11 @@ async function run() {
 
         app.patch('/ordered-tool/:id', verifyJWT, async(req, res)=>{
             const id = req.params.id;
-            // const payment = req.body;
             const filter = {_id: ObjectId(id)};
             const updatedDoc = {
                 $set: {
                     shipped: true,
-                    // transactionId: payment.transactionId
+                    
                 }
             }
             const updatedOrder = await ordersCollection.updateOne(filter, updatedDoc);
@@ -148,6 +153,7 @@ async function run() {
             res.send(tool);
         });
 
+        // users apis 
         app.get('/users', async (req, res) => {
             const users = await usersCollection.find().toArray();
             res.send(users);
@@ -190,6 +196,7 @@ async function run() {
             res.send({ result, token });
         });
 
+        // admin api
         app.get('/admin/:email', async (req, res) => {
             const email = req.params.email;
             const user = await usersCollection.findOne({ email: email })
